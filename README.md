@@ -1,7 +1,7 @@
 # fantacalcio scraper
+Scrape Serie A soccer player's stats!
 
-## Install
-
+## Install
 npm install domekuf/fantacalcio-scraper
 
 ## Get a template
@@ -16,8 +16,10 @@ and offer gin and tonic to your friends like [me](https://paypal.me/DDiIorio) fo
 ### PayPal Me
 [PayPal Me](https://paypal.me/DDiIorio)
 
+
+
 ### PayPal QR
-![paypal qr code](./paypal.png){width=450 height=450}
+<img src="https://raw.githubusercontent.com/domekuf/fantacalcio-scraper/main/paypal.png" alt="PayPal QR code" style="height: 450px; width:450px;"/>
 
 ### Satispay
-![satispay qr code](./satispay.jpeg){width=450 height=450}
+<img src="https://raw.githubusercontent.com/domekuf/fantacalcio-scraper/main/satispay.jpeg" alt="Satispay QR code" style="height: 450px; width:450px;"/>
