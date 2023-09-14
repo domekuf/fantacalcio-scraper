@@ -1,72 +1,121 @@
+const axios = require("axios");
+const cheerio = require("cheerio");
+const csv = require("csv-parser");
+const fs = require("fs");
 
-const axios = require('axios');
-const cheerio = require('cheerio');
+const config = require("./config");
+const { program } = require("commander");
 
-// Funzione per scaricare l'HTML e restituire l'URL del giocatore
-//
-// Funzione per scaricare l'HTML e restituire i valori FV, PG e QT
-async function getPlayerInfo(url) {
+// Download HTML and scrape fantasyVote, playedGames and expectedValue
+async function getPlayerStats(url) {
   try {
-    // Scarica l'HTML della pagina
     const response = await axios.get(url);
 
-    // Carica l'HTML nella libreria cheerio
     const $ = cheerio.load(response.data);
 
-
-    // Seleziona i valori FV, PG e QT con gli XPath forniti
-    const FV = $('#player-main-info div:nth-child(2) div:nth-child(1) ul li:nth-child(2) span:nth-child(1)').text().trim();
-    const PG = $('#player-summary-stats > div > header > table > tbody > tr:nth-child(1) > td.value').text().trim();
-    const QT = $('#player-main-info div:nth-child(2) div:nth-child(2) ul li:nth-child(1) span:nth-child(1)').text().trim();
-
-    return { FV, PG, QT };
-
+    const fantasyVote = $(config.xpath.fantasyVote).text().trim().replace(',','.');
+    const playedGames = $(config.xpath.playedGames).text().trim();
+    const expectedValue = $(config.xpath.expectedValue).text().trim();
+    return { url, fantasyVote, playedGames, expectedValue };
   } catch (error) {
-    // Gestisci gli errori, ad esempio se la richiesta HTTP fallisce
-    return 'Errore nella richiesta HTTP';
+    return "Errore nella richiesta HTTP";
   }
 }
 
-async function getPlayerURL(nome) {
+// Download search page HTML and scrape player's URL
+async function getPlayerURL(name) {
   try {
-    // Componi l'URL di ricerca
-    const url = `https://www.fantacalcio.it/ricerca?q=${encodeURIComponent(nome)}`;
+    const url = `https://www.fantacalcio.it/ricerca?q=${encodeURIComponent(
+      name,
+    )}`;
 
-    // Scarica l'HTML della pagina
     const response = await axios.get(url);
 
-    // Carica l'HTML nella libreria cheerio
     const $ = cheerio.load(response.data);
 
-    // Seleziona l'elemento con XPath
-    const playerLink = $('a.player-name.player-link').attr('href');
+    // Select element using X Path
+    const playerLink = $("a.player-name.player-link").attr("href");
 
     if (playerLink) {
       // Restituisci l'URL del giocatore
-      return getPlayerInfo(playerLink);
+      return playerLink;
     } else {
-      // Se l'elemento non è stato trovato, restituisci un messaggio di errore
-      return 'Giocatore non trovato';
+      return "Giocatore non trovato";
     }
   } catch (error) {
-    // Gestisci gli errori, ad esempio se la richiesta HTTP fallisce
-    return 'Errore nella richiesta HTTP';
+    return "Errore nella richiesta HTTP";
   }
 }
 
 // Esegui la funzione con il nome del giocatore desiderato
 
-const playerName = process.argv[2];
+const csvFileName = "fante.csv";
 
-if (!playerName) {
-  console.error('Inserire il nome del giocatore come argomento.');
-  process.exit(1);
-}
-getPlayerURL(playerName)
-  .then((playerURL) => {
-    console.log(playerName + ',' + playerURL.FV.replace(',','.') + ','+ playerURL.PG+','+playerURL.QT);
-  })
-  .catch((error) => {
-    console.error('Errore:', error);
+function readPlayersFromCSV(csvFileName) {
+  const players = [];
+
+  return new Promise((resolve, reject) => {
+    fs.createReadStream(csvFileName)
+      .pipe(csv())
+      .on("data", (row) => {
+        if (row.name) {
+          players.push({
+            name: row.name,
+            team: row.team,
+          });
+        }
+      })
+      .on("end", () => {
+        resolve(players);
+      })
+      .on("error", (error) => {
+        reject(error);
+      });
   });
+}
 
+program.version("1.0.0");
+program
+  .option("-u, --url [playerName]", "Print player URL")
+  .option("-s, --stats [playerName]", "Print player stats")
+  .option("-i, --csv-in <csvFileName>", "Read players from a CSV file")
+  .option("-o, --csv-out [separator]", "Output as CSV");
+
+program.parse(process.argv);
+
+const options = program.opts();
+
+function getPlayerStatsOrUrl(playerName, callback = console.log) {
+  getPlayerURL(playerName).then((playerLink) => {
+    if (options.stats) {
+      getPlayerStats(playerLink).then((playerStats) => {
+        callback(playerStats);
+      });
+    } else {
+      callback(playerLink);
+    }
+  });
+}
+
+if (options.csvIn) {
+  const s = options.separator || ',';
+  readPlayersFromCSV(options.csvIn).then((players) => {
+    for (let i in players) {
+      const player = players[i];
+      getPlayerStatsOrUrl(player.name, (fullPlayer) => {
+        if (options.csvOut) {
+          console.log(`${player.team}${s}${player.name}${s}${fullPlayer.url}${s}${fullPlayer.fantasyVote},${fullPlayer.playedGames}${s}${fullPlayer.expectedValue}`)
+        } else {
+          console.log(fullPlayer);
+        }
+      });
+    }
+
+  });
+} else if (typeof(options.url) === 'string' || typeof(options.stats) === 'string') {
+  const playerName = options.url || options.stats;
+  getPlayerStatsOrUrl(playerName);
+} else {
+  console.log("Either --csv-in or player name should be supplied.");
+  program.help();
+}
