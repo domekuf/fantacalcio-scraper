@@ -1,11 +1,11 @@
 {
   "name": "fantacalcio-scraper",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "prettier": {
     "singleQuote": true
   },
   "description": "Scrape Serie A soccer player's stats",
-  "main": "main.js",
+  "main": "./lib/main.js",
   "bin": {
     "fcs": "./bin/fcs"
   },
