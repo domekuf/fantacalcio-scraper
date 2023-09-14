@@ -1,8 +1,11 @@
 {
   "name": "fantacalcio",
   "version": "1.0.0",
+  "prettier": {
+    "singleQuote": true
+  },
   "description": "",
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -14,8 +17,5 @@
     "commander": "^11.0.0",
     "csv-parser": "^3.0.0",
     "prettier": "^3.0.3"
-  },
-  "devDependencies": {
-    "eslint": "^8.49.0"
   }
 }

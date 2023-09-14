@@ -1,10 +1,10 @@
-const axios = require("axios");
-const cheerio = require("cheerio");
-const csv = require("csv-parser");
-const fs = require("fs");
+const axios = require('axios');
+const cheerio = require('cheerio');
+const csv = require('csv-parser');
+const fs = require('fs');
 
-const config = require("./config");
-const { program } = require("commander");
+const config = require('./config');
+const { program } = require('commander');
 
 // Download HTML and scrape fantasyVote, playedGames and expectedValue
 async function getPlayerStats(url) {
@@ -13,12 +13,15 @@ async function getPlayerStats(url) {
 
     const $ = cheerio.load(response.data);
 
-    const fantasyVote = $(config.xpath.fantasyVote).text().trim().replace(',','.');
+    const fantasyVote = $(config.xpath.fantasyVote)
+      .text()
+      .trim()
+      .replace(',', '.');
     const playedGames = $(config.xpath.playedGames).text().trim();
     const expectedValue = $(config.xpath.expectedValue).text().trim();
     return { url, fantasyVote, playedGames, expectedValue };
   } catch (error) {
-    return "Errore nella richiesta HTTP";
+    return 'HTTP Error';
   }
 }
 
@@ -34,22 +37,17 @@ async function getPlayerURL(name) {
     const $ = cheerio.load(response.data);
 
     // Select element using X Path
-    const playerLink = $("a.player-name.player-link").attr("href");
+    const playerLink = $('a.player-name.player-link').attr('href');
 
     if (playerLink) {
-      // Restituisci l'URL del giocatore
       return playerLink;
     } else {
-      return "Giocatore non trovato";
+      return 'Player not found';
     }
   } catch (error) {
-    return "Errore nella richiesta HTTP";
+    return 'HTTP Error';
   }
 }
-
-// Esegui la funzione con il nome del giocatore desiderato
-
-const csvFileName = "fante.csv";
 
 function readPlayersFromCSV(csvFileName) {
   const players = [];
@@ -57,7 +55,7 @@ function readPlayersFromCSV(csvFileName) {
   return new Promise((resolve, reject) => {
     fs.createReadStream(csvFileName)
       .pipe(csv())
-      .on("data", (row) => {
+      .on('data', (row) => {
         if (row.name) {
           players.push({
             name: row.name,
@@ -65,21 +63,21 @@ function readPlayersFromCSV(csvFileName) {
           });
         }
       })
-      .on("end", () => {
+      .on('end', () => {
         resolve(players);
       })
-      .on("error", (error) => {
+      .on('error', (error) => {
         reject(error);
       });
   });
 }
 
-program.version("1.0.0");
+program.version('1.0.0');
 program
-  .option("-u, --url [playerName]", "Print player URL")
-  .option("-s, --stats [playerName]", "Print player stats")
-  .option("-i, --csv-in <csvFileName>", "Read players from a CSV file")
-  .option("-o, --csv-out [separator]", "Output as CSV");
+  .option('-u, --url [playerName]', 'Print player URL')
+  .option('-s, --stats [playerName]', 'Print player stats')
+  .option('-i, --csv-in <csvFileName>', 'Read players from a CSV file')
+  .option('-o, --csv-out [separator]', 'Output as CSV');
 
 program.parse(process.argv);
 
@@ -104,18 +102,22 @@ if (options.csvIn) {
       const player = players[i];
       getPlayerStatsOrUrl(player.name, (fullPlayer) => {
         if (options.csvOut) {
-          console.log(`${player.team}${s}${player.name}${s}${fullPlayer.url}${s}${fullPlayer.fantasyVote},${fullPlayer.playedGames}${s}${fullPlayer.expectedValue}`)
+          console.log(
+            `${player.team}${s}${player.name}${s}${fullPlayer.url}${s}${fullPlayer.fantasyVote},${fullPlayer.playedGames}${s}${fullPlayer.expectedValue}`,
+          );
         } else {
           console.log(fullPlayer);
         }
       });
     }
-
   });
-} else if (typeof(options.url) === 'string' || typeof(options.stats) === 'string') {
+} else if (
+  typeof options.url === 'string' ||
+  typeof options.stats === 'string'
+) {
   const playerName = options.url || options.stats;
   getPlayerStatsOrUrl(playerName);
 } else {
-  console.log("Either --csv-in or player name should be supplied.");
+  console.log('Either --csv-in or player name should be supplied.');
   program.help();
 }
